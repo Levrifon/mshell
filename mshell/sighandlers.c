@@ -50,7 +50,7 @@ sigchld_handler(int sig)
   if (verbose)
     printf("sigchld_handler: entering\n");
     
-  while((pid = waitpid(-1,&status,WNOHANG | WUNTRACED) >0)) {
+  while((pid = waitpid(-1,&status,WNOHANG | WUNTRACED)) >0) {
     if(WIFEXITED(status))  {
       printf("Job terminé  pid : %d\n",pid);
       /*job = jobs_getjobpid(pid);*/
@@ -84,8 +84,9 @@ sigint_handler(int sig)
   pid_t pid;
   if (verbose)
   printf("sigint_handler: entering\n");
-    
+
   pid = jobs_fgpid();
+  printf("%d pid",pid);
   if(pid != 0) {
     kill(pid,sig);
   }

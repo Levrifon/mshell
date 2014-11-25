@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <assert.h>
 #include "jobs.h"
 
 #define BOLD "\033[00;01m"
@@ -80,9 +80,14 @@ treat_argv(char **argv) {
 void
 do_bg(char **argv) 
 {
-    printf("do_bg : To be implemented\n");
-    
-    return;
+	struct job_t* job = treat_argv(argv);
+	if(job != NULL){
+		job->jb_state = BG;
+		/* repasse le processus en avant plan avec le signal SIGCONT */
+		assert(kill(job->jb_pid, SIGCONT) != -1);
+    } else {
+    	printf("Entrez un processus valide.\n");
+    }
 }
 
 
@@ -90,55 +95,77 @@ do_bg(char **argv)
 void
 waitfg(pid_t pid)
 {
-	while(pid == jobs_fgpid()) {
-		sleep(1);
-	}    
-    return;
+	sigset_t vide, mask;
+	sigemptyset(&vide);
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGCHLD);
+	sigprocmask(SIG_BLOCK, &mask, NULL);
+	while(pid == jobs_fgpid()){
+		sigsuspend(&vide);
+	}
+	sigprocmask(SIG_SETMASK, &vide, NULL);
 }
 
 
 /* do_fg - Execute the builtin fg command */
-void
-do_fg(char **argv) 
-{
-    printf("do_fg : To be implemented\n");
-    
-    return;
+void do_fg(char **argv){
+	struct job_t* job = treat_argv(argv);
+	if(job != NULL){
+		job->jb_state = FG;
+		/* repasse le processus en avant plan avec le signal SIGCONT */
+		assert(kill(job->jb_pid, SIGCONT) != -1);
+		/* attendre qu'il se remette en arrière plan */
+		waitfg(job->jb_pid);
+    } else {
+    	printf("Entrez un processus valide.\n");
+    }
 }
 
 /* do_stop - Execute the builtin stop command */
 void
 do_stop(char **argv) 
 {
-  printf("do_stop : To be implemented\n");
-  
-  return;
+ 	struct job_t* job = treat_argv(argv);
+	if(job != NULL){
+		job->jb_state = ST;
+		/* repasse le processus en avant plan avec le signal SIGCONT */
+		assert(kill(job->jb_pid, SIGSTOP) != -1);
+    } else {
+    	printf("Entrez un processus valide.\n");
+    }
 }
 
 /* do_kill - Execute the builtin kill command */
 void
 do_kill(char **argv) 
 {
-    printf("do_kill : To be implemented\n");
-    
-    return;
+	struct job_t* job = treat_argv(argv);
+	if(job != NULL){
+		job->jb_state = UNDEF;
+		/* repasse le processus en avant plan avec le signal SIGCONT */
+		assert(kill(job->jb_pid, SIGINT) != -1);
+		jobs_clearjob(job);
+    } else {
+    	printf("Entrez un processus valide.\n");
+    }
 }
 
 /* do_exit - Execute the builtin exit command */
 void
 do_exit()
 {
-    printf("do_exit : To be implemented\n");
-    
-    return;
+	if(jobs_getstoppedjob() == NULL){
+   		exit(EXIT_SUCCESS);
+    } else {
+    	printf("Il y a des jobs stoppés jeune fou!\n");
+    }
 }
 
 /* do_jobs - Execute the builtin fg command */
 void
 do_jobs()
 {
-    printf("do_jobs : To be implemented\n");
-    
-    return;
+    jobs_listjobs();
+
 }
 
